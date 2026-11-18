@@ -1,0 +1,77 @@
+# Monitoring-Stack: Prometheus + Node Exporter + Grafana + Uptime Kuma
+# Weboberflächen lauschen nur auf 127.0.0.1 – Zugriff per SSH-Tunnel oder Reverse Proxy.
+name: monitoring
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+    volumes:
+      - ./prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  # Läuft im Host-Netz, damit Netzwerk-Statistiken des Servers stimmen.
+  # Port 9100 ist per Firewall nur aus dem Docker-Netz erreichbar (siehe README).
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    command:
+      - --path.rootfs=/host
+      - --web.listen-address=:9100
+    network_mode: host
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD in .env setzen}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - monitoring
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    ports:
+      - "127.0.0.1:3001:3001"
+    volumes:
+      - uptime-kuma-data:/app/data
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+networks:
+  monitoring:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+
+volumes:
+  prometheus-data:
+  grafana-data:
+  uptime-kuma-data:

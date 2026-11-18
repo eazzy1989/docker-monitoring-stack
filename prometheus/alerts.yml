@@ -1,0 +1,34 @@
+groups:
+  - name: server
+    rules:
+      - alert: ExporterNichtErreichbar
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} auf {{ $labels.instance }} liefert keine Daten"
+
+      - alert: HoheCPULast
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU-Last auf {{ $labels.instance }} seit 10 Minuten über 90 %"
+
+      - alert: WenigArbeitsspeicher
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "RAM-Auslastung auf {{ $labels.instance }} über 90 %"
+
+      - alert: FestplatteFastVoll
+        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) * 100 < 10
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Weniger als 10 % frei auf {{ $labels.mountpoint }} ({{ $labels.instance }})"
