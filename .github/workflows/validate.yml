@@ -22,4 +22,7 @@ jobs:
             prom/prometheus:latest check config /etc/prometheus/prometheus.yml
 
       - name: Grafana-Dashboards prüfen (gültiges JSON)
-        run: for f in grafana/dashboards/*.json; do python3 -m json.tool "$f" > /dev/null && echo "OK: $f"; done
+        run: |
+          for f in grafana/dashboards/*.json; do
+            python3 -m json.tool "$f" > /dev/null && echo "OK $f"
+          done
