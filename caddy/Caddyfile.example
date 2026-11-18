@@ -1,0 +1,18 @@
+# Caddy als Reverse Proxy mit HTTPS im Heimnetz
+#
+# SERVER_IP durch die LAN-IP des Servers ersetzen.
+# "tls internal": Caddy stellt die Zertifikate über eine eigene Root-CA aus.
+# Keine Domain und keine Portfreigabe am Router nötig. Die Root-CA wird
+# einmalig auf den eigenen Geräten als vertrauenswürdig importiert (siehe README).
+
+# Grafana
+https://SERVER_IP:3443 {
+	tls internal
+	reverse_proxy 127.0.0.1:3000
+}
+
+# Uptime Kuma (WebSockets leitet Caddy automatisch weiter)
+https://SERVER_IP:3444 {
+	tls internal
+	reverse_proxy 127.0.0.1:3001
+}
